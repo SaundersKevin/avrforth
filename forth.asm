@@ -78,12 +78,12 @@
 .org SRAM_START
 	inpointer:
 		.byte 2
+	parsepointer:
+		.byte 2
 	textBuffer:
 		.byte 32
 	; What about some variables? These need to be stored in data
 	; Good example layout of primitive
-	parsepointer:
-		.byte 2
 	latestlink:
 		.byte 2
 	rsp:
