@@ -64,6 +64,16 @@
 	sts rsp+1, r31
 .endmacro
 
+.macro dpush; 0, 1
+	push @0 ; push low
+	push @1 ; push high
+.endmacro
+
+.macro dpop ; 0, 1
+	pop @1 ; pop high
+	pop @0 ; pop low
+.endmacro
+
 .dseg ; This can produce my starting words and code fields
 .org SRAM_START
 	inpointer:
@@ -106,7 +116,7 @@
 	length3:
 		.byte 1
 	name3:
-		.byte 4
+		.byte 1
 	flags3:
 		.byte 1
 	code3:
@@ -163,6 +173,8 @@
 ; general purpose data memory starts at
 .org 0x0000
 	rjmp boot ; boot up
+.org 0x0001
+	rjmp boot
 ; other .orgs for interrupts
 .org 0x0024 ; uart interrupt: interrupt vector 18
 	rjmp input
@@ -182,11 +194,9 @@ boot:
 
 	; starting UART for key and emit
 	rcall start_uart
-	; enable global interrupts for keying in input
-	sei
 
 	; enable sleep  ->  idle mode
-	ldi r16, (1<<SE)
+	ldi r16, (1<<SE), (0<<SM0), (0<<SM1), (0<<SM2)
 	sts SMCR, r16
 
 	; Initalize inpointer
@@ -207,6 +217,10 @@ boot:
 	ldi r16, high(length7)
 	sts latestlink+1, r16
 
+	; textBuffer needs to start with <CR> for line
+	ldi r16, 13
+	sts textBuffer, r16
+
 
 	; loading primitives
 	; find
@@ -214,8 +228,7 @@ boot:
 	sts length, r16
 	ldi r16, 39     ; Load name -- 39 is '
 	sts name, r16
-	; link zeroed -- I will use this for error checking in the future, but for now
-	; it is fine
+	; link zeroed -- I will use this for error checking in the future
 	ldi r16, 0
 	sts link, r16
 	ldi r16, 0
@@ -250,16 +263,10 @@ boot:
 	sts link3, r16
 	ldi r16, high(length2)
 	sts link3+1, r16
-	ldi r16, 4            ; Loading length
+	ldi r16, 1            ; Loading length
 	sts length3, r16
-	ldi r16, 'e'          ; Loading name
+	ldi r16, '.'          ; Loading name
 	sts name3, r16
-	ldi r16, 'm'
-	sts name3+1, r16
-	ldi r16, 'i'
-	sts name3+2, r16
-	ldi r16, 't'
-	sts name3+3, r16
 	ldi r16, low(emit)    ; Loading code field
 	sts code3, r16
 	ldi r16, high(emit)
@@ -352,24 +359,31 @@ boot:
 	sts code7, r16
 	ldi r16, high(endtoploop)
 	sts code7+1, r16
-	
-	; Since next isnt pointing at anything usable yet
-;	rjmp loop ; Sleep until interrupt
 
+
+	; enable global interrupts for keying in input
+	; This is done after all the loading up of things so nothings is
+	; broken accidentally
+	ldi r24, 'I'
+	rcall putchar
+	sei
+	
+	; Announcing that the device is ready for input
 	ldi r24, 'o'
 	rcall putchar
 	ldi r24, 'k'
 	rcall putchar
 	ldi r24, 10
 	rcall putchar
-;	rjmp loop
-	; This needs some initial condition to start. Where is the code field?
-	; Set code field as X, since that is where the program will actually start
+
+	; Set code field of interpreter as X, since that is where the program will actually start
 	ldi r26, low(code6+2)
 	ldi r27, high(code6+2)
 	rjmp entertoploop
 
 next:
+	ldi r24, 'N'
+	rcall putchar
 	ld r26, Y+ ; Load (Y) to X: low then high
 	ld r27, Y+
 
@@ -382,17 +396,40 @@ next:
 line:
 ; goes to sleep until input is given -- checks to see if the input is /r, then resets
 ; inpointer and jumps to next
+; idea for fixing interpreter
+; I can have line return the buffer unless it is all the way consumed
+; So, for example, I can check the most recent code looked at with parsepointer and 
+; see if it is NULL. If it is not, I just return
+; When actually taking input, I can set the next input at NULL when <CR> is found
+;	check if parsepointer points to <CR>
+	ldi r24, 'L'
+	rcall putchar
+	lds r26, parsepointer
+	lds r27, parsepointer+1
+	ld r16, X
+;	cpi r16, 13
+;	brne next ; If character is not equal to <CR>, return early
+
+;	reset inpointer
+	ldi r16, low(textBuffer)
+	sts inpointer, r16
+	ldi r16, high(textBuffer)
+	sts inpointer+1, r16
+lineloop:
+	ldi r24, 'l'
+	rcall putchar
 	sleep
 
 	cpi r17, 13 ; r17 was set to the inputed letter in input
 	breq resetline
 	
-	rjmp line
+	rjmp lineloop
 resetline:
+;	reset parsepointer before returning
 	ldi r16, low(textBuffer)
-	sts inpointer, r16
+	sts parsepointer, r16
 	ldi r16, high(textBuffer)
-	sts inpointer+1, r16
+	sts parsepointer+1, r16
 
 	rjmp next
 
@@ -427,7 +464,6 @@ endtoploop:
 	
 
 enter:
-	; I need to switch this to RSP instead of PSP
 	rpush r28, r29 ; push Y
 	; adiw r26, 2 ; X += 2 (This was done in next using post increment)
 	movw r28, r26 ; Y <- X
@@ -440,8 +476,7 @@ exit:
 
 ; ---------------------
 emit:
-	pop r24 ; clear high
-	pop r24 ; use low
+	dpop r24,r24 ; clear high, then use low
 	rcall putchar
 
 	rjmp next
@@ -466,27 +501,33 @@ hello:
 
 exec:
 ; pops the top of the stack and uses it as the execution address
-	pop r31 ; high, then
-	pop r30 ; low
+	dpop r30, r31 ; data pop
 
 	ld r20, Z+
 	ld r21, Z
-
+; If I pop to X instead of Z then I could eliminate this command -- can I do that?
 	movw r30, r20
 
 	ijmp ; indirect jump to Z -- now the execution token
 	
 
 find:
+	ldi r24, 'F'
+	rcall putchar
     ; Load current link into r18:r19
     lds     r18, latestlink
     lds     r19, latestlink+1
 
     ; Load buffer pointer into r20:r21
-    lds     r20, inpointer
-    lds     r21, inpointer+1
+    lds     r20, parsepointer
+    lds     r21, parsepointer+1
+
+	; Consume spaces before looking at strings
+	; I might move the pointers over to Z and X here so I can check and increment for spaces
 
 findloop:
+	ldi r24, 'f'
+	rcall putchar
     ; Put current link into Z pointer
     movw    r30, r18           ; Z = link
 
@@ -500,13 +541,13 @@ findloop:
 checkstring:
     ; If length is zero, we matched whole name
     tst     r16
-    breq    matchfound
-
-    ; Load one character from dictionary name
-    ld      r22, Z+
+    breq    lengthend
 
     ; Load one character from buffer string
     ld      r23, X+
+
+    ; Load one character from dictionary name
+    ld      r22, Z+
 
     ; Compare characters
     cp      r22, r23
@@ -518,17 +559,22 @@ checkstring:
 
 ; -------------------------------------
 ; SUCCESS: names matched
-matchfound:
+lengthend:
     ; At this point Z points to flags field
     ; (because we consumed length + name bytes)
-	; RIGHT HERE I ALSO NEED TO INCREMENT INPOINTER TO THE NEXT TOKEN, SKIPPING THE SPACE
-	; actually, find only deals with a single word at a time
-	; maybe I can loop externally to call find on every next word
-	; or maybe I can make line return the buffer unless it is cleared
-	; ADD IN PARSEPOINTER FOR THIS
+	; I check to make sure the full token is consumed, then write out the new
+	; parsepointer, push the exec token onto the stack and return
+	cpi r23, 13
+	breq matchfound
+	cpi r23, ' '
+	breq matchfound
+	rjmp nomatch
+matchfound:
+	sts parsepointer, r26 ; low
+	sts parsepointer+1, r27 ; high
+	
     adiw r30, 1
-    push r30 ; low, then
-    push r31 ; high
+    dpush r30, r31 ; push to data stack
     rjmp next ; returning to the running program
 
 ; -------------------------------------
@@ -555,6 +601,7 @@ wait_UDRE:
 	ret
 
 ; Since r17 is used here, I cannot use it elsewhere
+; I need to add in support for backpacing
 input: ; Takes input over UART
 	lds r17, UDR0
 	push r30 ; low(Z)
@@ -567,6 +614,7 @@ input: ; Takes input over UART
 	; Write r17 to where we are pointing
 	st Z, r17
 
+	; r24 is only used by putchar
 	mov r24, r17
 	rcall putchar
 
