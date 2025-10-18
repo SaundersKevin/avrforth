@@ -76,14 +76,16 @@
 
 .dseg ; This can produce my starting words and code fields
 .org SRAM_START
+	state:
+		.byte 1
 	inpointer:
-		.byte 2
-	parsepointer:
 		.byte 2
 	textBuffer:
 		.byte 32
 	; What about some variables? These need to be stored in data
 	; Good example layout of primitive
+	parsepointer:
+		.byte 2
 	latestlink:
 		.byte 2
 	rsp:
@@ -166,6 +168,39 @@
 		.byte 1
 	code7:
 		.byte 2
+; 8th -- dup
+	link8:
+		.byte 2
+	length8:
+		.byte 1
+	name8:
+		.byte 3
+	flag8:
+		.byte 1
+	code8:
+		.byte 2
+; 9th -- add
+	link9:
+		.byte 2
+	length9:
+		.byte 1
+	name9:
+		.byte 3
+	flag9:
+		.byte 1
+	code9:
+		.byte 2
+; 10th -- one
+	link10:
+		.byte 2
+	length10:
+		.byte 1
+	name10:
+		.byte 1
+	flag10:
+		.byte 1
+	code10:
+		.byte 2
 
 ; Different data array
 .cseg
@@ -210,12 +245,6 @@ boot:
 	sts parsepointer, r16
 	ldi r16, high(textBuffer)
 	sts parsepointer+1, r16
-
-	; Initialize latestlink
-	ldi r16, low(length7)
-	sts latestlink, r16
-	ldi r16, high(length7)
-	sts latestlink+1, r16
 
 	; textBuffer needs to start with <CR> for line
 	ldi r16, 13
@@ -285,8 +314,7 @@ boot:
 	sts name4+1, r16
 	ldi r16, 'l'
 	sts name4+2, r16
-	ldi r16, 'l'
-	sts name4+3, r16
+	sts name4+3, r16 ; r16 is still l
 	ldi r16, 'o'
 	sts name4+4, r16
 	ldi r16, low(hello)   ; Loading code field
@@ -360,6 +388,66 @@ boot:
 	ldi r16, high(endtoploop)
 	sts code7+1, r16
 
+	; dup
+	ldi r16, low(length7)
+	sts link8, r16
+	ldi r16, high(length7)
+	sts link8+1, r16
+	ldi r16, 3
+	sts length8, r16
+	ldi r16, 'd'
+	sts name8, r16
+	ldi r16, 'u'
+	sts name8+1, r16
+	ldi r16, 'p'
+	sts name8+2, r16
+	ldi r16, low(dup)
+	sts code8, r16
+	ldi r16, high(dup)
+	sts code8+1, r16
+
+	; add
+	ldi r16, low(length8)
+	sts link9, r16
+	ldi r16, high(length8)
+	sts link9+1, r16
+	ldi r16, 3
+	sts length9, r16
+	ldi r16, 'a'
+	sts name9, r16
+	ldi r16, 'd'
+	sts name9+1, r16
+	sts name9+2, r16 ; r16 is still 'd'
+	ldi r16, low(add_stack)
+	sts code9, r16
+	ldi r16, high(add_stack)
+	sts code9+1, r16
+
+	; one
+	ldi r16, low(length9)
+	sts link10, r16
+	ldi r16, high(length9)
+	sts link10+1, r16
+	ldi r16, 1
+	sts length10, r16
+	ldi r16, '1'
+	sts name10, r16
+	ldi r16, low(one)
+	sts code10, r16
+	ldi r16, high(one)
+	sts code10+1, r16
+
+	; VARIABLES -----
+
+	; Initialize latestlink
+	ldi r16, low(length10)
+	sts latestlink, r16
+	ldi r16, high(length10)
+	sts latestlink+1, r16
+
+	; here
+
+	; 
 
 	; enable global interrupts for keying in input
 	; This is done after all the loading up of things so nothings is
@@ -382,8 +470,8 @@ boot:
 	rjmp entertoploop
 
 next:
-	ldi r24, 'N'
-	rcall putchar
+;	ldi r24, 'N'
+;	rcall putchar
 	ld r26, Y+ ; Load (Y) to X: low then high
 	ld r27, Y+
 
@@ -402,22 +490,26 @@ line:
 ; see if it is NULL. If it is not, I just return
 ; When actually taking input, I can set the next input at NULL when <CR> is found
 ;	check if parsepointer points to <CR>
-	ldi r24, 'L'
-	rcall putchar
+;	ldi r24, 'L'
+;	rcall putchar
 	lds r26, parsepointer
 	lds r27, parsepointer+1
 	ld r16, X
-;	cpi r16, 13
-;	brne next ; If character is not equal to <CR>, return early
+	cpi r16, 13
+	breq continueline ; If character is not equal to <CR>, return early
+	cpi r16, 10
+	breq continueline
+	rjmp next
 
+continueline:
 ;	reset inpointer
 	ldi r16, low(textBuffer)
 	sts inpointer, r16
 	ldi r16, high(textBuffer)
 	sts inpointer+1, r16
 lineloop:
-	ldi r24, 'l'
-	rcall putchar
+;	ldi r24, 'l'
+;	rcall putchar
 	sleep
 
 	cpi r17, 13 ; r17 was set to the inputed letter in input
@@ -426,10 +518,13 @@ lineloop:
 	rjmp lineloop
 resetline:
 ;	reset parsepointer before returning
-	ldi r16, low(textBuffer)
+	ldi r16, low(textBuffer-1)
 	sts parsepointer, r16
-	ldi r16, high(textBuffer)
+	ldi r16, high(textBuffer-1)
 	sts parsepointer+1, r16
+
+	ldi r24, 10
+	rcall putchar
 
 	rjmp next
 
@@ -484,6 +579,8 @@ emit:
 hello:
 	ldi r24, 10
 	rcall putchar
+	ldi r24, 13
+	rcall putchar
 	ldi r24, 'H'
 	rcall putchar
 	ldi r24, 'e'
@@ -496,6 +593,36 @@ hello:
 	rcall putchar
 	ldi r24, 10
 	rcall putchar
+	ldi r24, 13
+	rcall putchar
+
+	rjmp next
+
+;--currently_working_here--
+;I need to add in more regular words
+dup:
+	dpop r26, r27
+	dpush r26, r27
+	dpush r26, r27
+
+	rjmp next
+
+add_stack:
+	dpop r26, r27
+
+	dpop r30, r31
+	
+	add r26, r30 ; I think this adds the full word
+	adc r27, r31
+	
+	dpush r26, r27
+
+	rjmp next
+
+one:
+	ldi r16, 1
+	ldi r18, 0
+	dpush r16, r18 ; high is null
 
 	rjmp next
 
@@ -512,39 +639,39 @@ exec:
 	
 
 find:
-	ldi r24, 'F'
-	rcall putchar
+;	ldi r24, 'F'
+;	rcall putchar
     ; Load current link into r18:r19
     lds     r18, latestlink
     lds     r19, latestlink+1
 
     ; Load buffer pointer into r20:r21
-    lds     r20, parsepointer
-    lds     r21, parsepointer+1
+    lds     r24, parsepointer
+    lds     r25, parsepointer+1
 
-	; Consume spaces before looking at strings
+	adiw r24, 1
 	; I might move the pointers over to Z and X here so I can check and increment for spaces
 
 findloop:
-	ldi r24, 'f'
-	rcall putchar
+;	ldi r24, 'f'
+;	rcall putchar
     ; Put current link into Z pointer
     movw    r30, r18           ; Z = link
 
     ; Copy buffer pointer into X pointer
-    movw    r26, r20           ; X = buffer
+    movw    r26, r24           ; X = buffer
 
     ; -------------------------------------
     ; Load length byte of dictionary name
     ld      r16, Z+            ; r16 = length, Z points to first char of name
 
 checkstring:
-    ; If length is zero, we matched whole name
-    tst     r16
-    breq    lengthend
-
     ; Load one character from buffer string
     ld      r23, X+
+
+	; If length is zero, we matched whole name
+    tst     r16
+    breq    lengthend
 
     ; Load one character from dictionary name
     ld      r22, Z+
@@ -570,6 +697,7 @@ lengthend:
 	breq matchfound
 	rjmp nomatch
 matchfound:
+	sbiw r26, 1
 	sts parsepointer, r26 ; low
 	sts parsepointer+1, r27 ; high
 	
