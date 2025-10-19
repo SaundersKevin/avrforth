@@ -203,6 +203,39 @@
 		.byte 1
 	code10:
 		.byte 2
+; 11th -- state
+	link11:
+		.byte 2
+	length11:
+		.byte 1
+	name11:
+		.byte 5
+	flag11:
+		.byte 1
+	code11:
+		.byte 2
+; 12th -- fetch (@)
+	link12:
+		.byte 2
+	length12:
+		.byte 1
+	name12:
+		.byte 1
+	flag12:
+		.byte 1
+	code12:
+		.byte 2
+; 13th -- store (!)
+	link13:
+		.byte 2
+	length13:
+		.byte 1
+	name13:
+		.byte 1
+	flag13:
+		.byte 1
+	code13:
+		.byte 2
 	data_seg:
 ; Different data array
 .cseg
@@ -368,6 +401,9 @@ boot:
 	ldi r16, high(code)
 	sts code6+5, r16
 ;	ldi r16, low(code) ; state
+;	sts code6+6, r16
+;	ldi r16, high(code)
+;	sts code6+7, r16
 	ldi r16, low(code2) ; exec's code field
 	sts code6+6, r16
 	ldi r16, high(code2)
@@ -577,7 +613,10 @@ exit:
 
 ; ---------------------
 emit:
-	dpop r24,r24 ; clear high, then use low
+	dpop r26,r27 ; move into X
+	adiw r26, 48 ; display a single digit correctly
+				 ; I need to make this display greater than 9, too
+	mov r24, r26
 	rcall putchar
 
 	rjmp next
