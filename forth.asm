@@ -269,6 +269,7 @@
 		.byte 1
 	code16:
 		.byte 2
+
 	data_seg:
 ; Different data array
 .cseg
@@ -546,6 +547,58 @@ boot:
 	sts code12, r16
 	ldi r16, high(fetch)
 	sts code12+1, r16
+
+	; store (!)
+	ldi r16, low(length12)
+	sts link13, r16
+	ldi r16, high(length12)
+	sts link13+1, r16
+	ldi r16, 1
+	sts length13, r16
+	ldi r16, '!'
+	sts name13, r16
+	ldi r16, low(store)
+	sts code13, r16
+	ldi r16, high(store)
+	sts code13+1, r16
+
+	; here
+	ldi r16, low(length13)
+	sts link14, r16
+	ldi r16, high(length13)
+	sts link14+1, r16
+	ldi r16, 4
+	sts length14, r16
+	ldi r16, 'h'
+	sts name14, r16
+	ldi r16, 'e'
+	sts name14, r16
+	ldi r16, 'r'
+	sts name14, r16
+	ldi r16, 'e'
+	sts name14, r16
+	ldi r16, low(point_here)
+	sts code14, r16
+	ldi r16, high(point_here)
+	sts code14+1, r16
+
+	; ifc
+	ldi r16, low(length14)
+	sts link15, r16
+	ldi r16, high(length14)
+	sts link15+1, r16
+	ldi r16, 3
+	sts length15, r16
+	ldi r16, 'i'
+	sts name15, r16
+	ldi r16, 'f'
+	sts name15+1, r16
+	ldi r16, 'c'
+	sts name15+2, r16
+	ldi r16, low(if_program)
+	sts code15, r16
+	ldi r16, high(if_program)
+	sts code15+1, r16
 
 	; VARIABLES -----
 
