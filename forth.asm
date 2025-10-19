@@ -598,8 +598,48 @@ hello:
 
 	rjmp next
 
-;--currently_working_here--
-;I need to add in more regular words
+--currently_working_here--
+I need to add in more regular words
+if then
+fetch_state:
+	lds r16, state
+	dpush r16, r1 ; low, then high -- low is state, high is NULL
+
+	rjmp next
+
+fetch:
+	; pops into X, then loads
+	dpop r26, r27 ; low, then high
+
+	; fetches cell
+	ld r16, X+ ; numbers are stored low, then high
+	ld r18 X
+
+	; pushes the fetched info back onto stack
+	dpush r16, r18
+
+	rjmp next
+
+store:
+	dpop r26, r27 ; address in X
+
+	dpop r30, r31 ; value in Z
+
+	st r30, X+
+	st r31, X
+
+	rjmp next
+
+if_program:
+	pop the top of the stach
+	tst popped value
+	branch if eq 
+if_branch:
+	fetch next values from code field
+	load into Y (IP)
+
+	rjmp next
+
 dup:
 	dpop r26, r27
 	dpush r26, r27

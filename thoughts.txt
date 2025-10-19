@@ -1,0 +1,96 @@
+-----
+Thoughts
+-----
+What registers to put things in?
+I have three pointer registers
+I am drowning in air
+I have 31 registers
+and only three usable pairs for what I need
+
+Name High Low
+X -- r27, r26
+Y -- r29, r28
+Z -- r31, r30
+
+Stack -- SPH, SPL
+
+I have five things to keep track of (in order of importance)
+
+-- X
+W   Working register
+
+-- Y
+IP  Interpreter pointer -- for next
+
+-- Stack
+PSP Personal stack pointer
+
+-- Z and memory
+RSP return stack pointer
+X   2nd working register
+
+--------------------
+
+I will .dseg and .cseg -- data and code sections
+
+.text will be all my things in flash that I can reference for the program to execute
+.data will be the starting data
+
+This means that I do not have to manually load all my primitives
+I can make the bootloader upload them through .data
+this will be faily simple:
+
+--------------------------------------------------
+|2 byte| 1 byte | <- known  |1 byte |  2 bytes   |
+| link | length | word name | flags | code field |
+|      |        |           |       |            |
+--------------------------------------------------
+
+ I think I can leave the location of link up to the assembler with labels
+ low(label) and high(label) let me reference the low and high bytes
+ That way I can reference the labels themselves
+ Yay :)
+
+--------------------
+
+I need to learn about compiling and interpreting modes, 
+as well as what the 'immediate' word means
+
+--------------------
+
+How should I go about taking input?
+interrupts
+
+--------------------
+
+Buffer TOS or not buffer TOS?
+
+--------------------
+
+How should the interpreter work?
+' is find -- checks the next token in buffer against known words in dictionary and puts
+execution token on stack
+exec pops the top of the stack into Z and then jumps to it
+
+-------------------
+
+How should the start and end of the top definition work?
+This will have to use the return stack
+pushing onto the stack X, which is the pointer to the code field
+popping X -> Z and using that to call the first threaded code will start the word
+next will take care of any threaded code after the first
+
+--------------------
+
+compiler/interpreter execution
+
+state @
+
+line find
+get state address
+fetch state onto stack
+-- if branches if zero, doesn't do anything otherwise -- 
+if state = 0 continue, else branch to then
+exec
+then get here address
+write execution pointer to here address
