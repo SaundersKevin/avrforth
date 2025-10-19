@@ -617,9 +617,9 @@ boot:
 	; VARIABLES -----
 
 	; Initialize latestlink
-	ldi r16, low(length10)
+	ldi r16, low(length16)
 	sts latestlink, r16
-	ldi r16, high(length10)
+	ldi r16, high(length16)
 	sts latestlink+1, r16
 
 	; here -- points at the start of open space
