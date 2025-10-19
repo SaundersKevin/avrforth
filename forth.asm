@@ -258,7 +258,17 @@
 		.byte 1
 	code15:
 		.byte 2
-; 16th
+; 16th -- subtract (-)
+	link16:
+		.byte 2
+	length16:
+		.byte 1
+	name16:
+		.byte 1
+	flag16:
+		.byte 1
+	code16:
+		.byte 2
 	data_seg:
 ; Different data array
 .cseg
@@ -401,7 +411,8 @@ boot:
 	sts code5+1, r16
 
 	; interpreter loop!
-	; line find state @ if exec endtoploop then here ! endtoploop
+	; line find dup 1 sub @ state @ and if exec endtoploop then here ! endtoploop
+	; or I could do nand instead of and and swap the compiler and interpreter spots
 	ldi r16, low(length5)
 	sts link6, r16
 	ldi r16, high(length5)
@@ -702,9 +713,6 @@ hello:
 
 	rjmp next
 
---currently_working_here--
-I need to add in more regular words
-if then compile side
 point_state:
 	ldi r16, low(state)
 	ldi r18, high(state)
@@ -788,6 +796,14 @@ add_stack:
 	dpush r26, r27
 
 	rjmp next
+
+sub_stack:
+	dpop r26, r27
+
+	dpop r30, r31
+
+	sub r26, r30
+	sbc r27, r31
 
 one:
 	ldi r16, 1
