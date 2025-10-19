@@ -522,6 +522,20 @@ boot:
 	ldi r16, high(point_state)
 	sts code11+1, r16
 
+	; fetch (@)
+	ldi r16, low(length11)
+	sts link12, r16
+	ldi r16, high(length11)
+	sts link12+1, r16
+	ldi r16, 1
+	sts length12, r16
+	ldi r16, '@'
+	sts name12, r16
+	ldi r16, low(fetch)
+	sts code12, r16
+	ldi r16, high(fetch)
+	sts code12+1, r16
+
 	; VARIABLES -----
 
 	; Initialize latestlink
