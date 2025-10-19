@@ -269,8 +269,8 @@
 		.byte 1
 	code16:
 		.byte 2
-
-	data_seg:
+	dataspace:
+		.byte 1
 ; Different data array
 .cseg
 ; Need to set registers to point at the correct values in data memory
@@ -623,9 +623,9 @@ boot:
 	sts latestlink+1, r16
 
 	; here -- points at the start of open space
-	ldi r16 low(data_seg)
+	ldi r16, low(dataspace)
 	sts here, r16
-	ldi r16, high(data_seg)
+	ldi r16, high(dataspace)
 	sts here+1, r16
 
 	; enable global interrupts for keying in input
@@ -800,7 +800,7 @@ fetch:
 
 	; fetches cell
 	ld r16, X+ ; numbers are stored low, then high
-	ld r18 X
+	ld r18, X
 
 	; pushes the fetched info back onto stack
 	dpush r16, r18
@@ -812,8 +812,8 @@ store:
 
 	dpop r30, r31 ; value in Z
 
-	st r30, X+
-	st r31, X
+	st X+, r30
+	st X, r31
 
 	rjmp next
 
