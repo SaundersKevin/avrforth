@@ -236,6 +236,29 @@
 		.byte 1
 	code13:
 		.byte 2
+; 14th -- here
+	link14:
+		.byte 2
+	length14:
+		.byte 1
+	name14:
+		.byte 4
+	flag14:
+		.byte 1
+	code14:
+		.byte 2
+; 15th -- if_compiled (ifc) | SHOULD NEVER BE CALLED IN INTERPRETER |
+	link15:
+		.byte 2
+	length15:
+		.byte 1
+	name15:
+		.byte 3
+	flag15:
+		.byte 1
+	code15:
+		.byte 2
+; 16th
 	data_seg:
 ; Different data array
 .cseg
@@ -378,7 +401,7 @@ boot:
 	sts code5+1, r16
 
 	; interpreter loop!
-	; line find state @ if exec endtoploop then here !
+	; line find state @ if exec endtoploop then here ! endtoploop
 	ldi r16, low(length5)
 	sts link6, r16
 	ldi r16, high(length5)
@@ -396,11 +419,11 @@ boot:
 	sts code6+2, r16
 	ldi r16, high(code5)
 	sts code6+3, r16
-	ldi r16, low(code) ; find's code field
+	ldi r16, low(code)  ; find's code field
 	sts code6+4, r16
 	ldi r16, high(code)
 	sts code6+5, r16
-;	ldi r16, low(code) ; state
+;	ldi r16, low(code)  ; state
 ;	sts code6+6, r16
 ;	ldi r16, high(code)
 ;	sts code6+7, r16
@@ -476,6 +499,28 @@ boot:
 	sts code10, r16
 	ldi r16, high(one)
 	sts code10+1, r16
+
+	; state
+	ldi r16, low(length10)
+	sts link11, r16
+	ldi r16, high(length10)
+	sts link11+1, r16
+	ldi r16, 5
+	sts length11, r16
+	ldi r16, 's'
+	sts name11, r16
+	ldi r16, 't'
+	sts name11+1, r16
+	ldi r16, 'a'
+	sts name11+2, r16
+	ldi r16, 't'
+	sts name11+3, r16
+	ldi r16, 'e'
+	sts name11+4, r16
+	ldi r16, low(point_state)
+	sts code11, r16
+	ldi r16, high(point_state)
+	sts code11+1, r16
 
 	; VARIABLES -----
 
