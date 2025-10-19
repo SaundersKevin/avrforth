@@ -88,6 +88,8 @@
 		.byte 2
 	latestlink:
 		.byte 2
+	here:
+		.byte 2
 	rsp:
 		.byte 2
 ; First Word -- find '
@@ -201,7 +203,7 @@
 		.byte 1
 	code10:
 		.byte 2
-
+	data_seg:
 ; Different data array
 .cseg
 ; Need to set registers to point at the correct values in data memory
@@ -343,6 +345,7 @@ boot:
 	sts code5+1, r16
 
 	; interpreter loop!
+	; line find state @ if exec endtoploop then here !
 	ldi r16, low(length5)
 	sts link6, r16
 	ldi r16, high(length5)
@@ -364,6 +367,7 @@ boot:
 	sts code6+4, r16
 	ldi r16, high(code)
 	sts code6+5, r16
+;	ldi r16, low(code) ; state
 	ldi r16, low(code2) ; exec's code field
 	sts code6+6, r16
 	ldi r16, high(code2)
@@ -445,9 +449,11 @@ boot:
 	ldi r16, high(length10)
 	sts latestlink+1, r16
 
-	; here
-
-	; 
+	; here -- points at the start of open space
+	ldi r16 low(data_seg)
+	sts here, r16
+	ldi r16, high(data_seg)
+	sts here+1, r16
 
 	; enable global interrupts for keying in input
 	; This is done after all the loading up of things so nothings is
@@ -600,10 +606,18 @@ hello:
 
 --currently_working_here--
 I need to add in more regular words
-if then
-fetch_state:
-	lds r16, state
-	dpush r16, r1 ; low, then high -- low is state, high is NULL
+if then compile side
+point_state:
+	ldi r16, low(state)
+	ldi r18, high(state)
+	dpush r16, r18 ; low, then high
+
+	rjmp next
+
+point_here:
+	ldi r16, low(here)
+	ldi r18, high(here)
+	dpush r16, r18
 
 	rjmp next
 
