@@ -631,13 +631,31 @@ store:
 	rjmp next
 
 if_program:
-	pop the top of the stach
-	tst popped value
-	branch if eq 
-if_branch:
-	fetch next values from code field
-	load into Y (IP)
+	;pop the top of the stach
+	;cannot be to X, since that is needed if branch
+	dpop r30, r31
+	
+	;tst popped value
+	tst r30
+	;branch if eq
+	breq if_branch
+	; testing the second part of the register
+	; mostly this will be zero, so we test low first
+	tst r31
+	breq if_branch
 
+	; skip the address for branching, then continue with next
+	adiw r28, 2
+	rjmp next
+
+if_branch:
+	;fetch next values from code field into Y (IP) -- this will skip execution to
+	;where specified
+	;X is already pointing at the correct spot
+	ld r28, X+
+	ld r29, X
+
+	; resume execution
 	rjmp next
 
 dup:
