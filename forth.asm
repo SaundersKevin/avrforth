@@ -600,6 +600,20 @@ boot:
 	ldi r16, high(if_program)
 	sts code15+1, r16
 
+	; subtract
+	ldi r16, low(length15)
+	sts link16, r16
+	ldi r16, high(length15)
+	sts link16+1, r16
+	ldi r16, 1
+	sts length16, r16
+	ldi r16, '-'
+	sts name16, r16
+	ldi r16, low(sub_stack)
+	sts code16, r16
+	ldi r16, high(sub_stack)
+	sts code16+1, r16
+
 	; VARIABLES -----
 
 	; Initialize latestlink
