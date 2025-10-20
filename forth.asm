@@ -92,7 +92,7 @@
 		.byte 2
 	rsp:
 		.byte 2
-; First Word -- find '
+; First Word -- find (')
 	link:
 		.byte 2
 	length:
@@ -181,18 +181,18 @@
 		.byte 1
 	code8:
 		.byte 2
-; 9th -- add
+; 9th -- add (+)
 	link9:
 		.byte 2
 	length9:
 		.byte 1
 	name9:
-		.byte 3
+		.byte 1
 	flag9:
 		.byte 1
 	code9:
 		.byte 2
-; 10th -- one
+; 10th -- one (1)
 	link10:
 		.byte 2
 	length10:
@@ -269,6 +269,19 @@
 		.byte 1
 	code16:
 		.byte 2
+; 17th -- latest
+	link17:
+		.byte 2
+	length17:
+		.byte 1
+	name17:
+		.byte 6
+	flag17:
+		.byte 1
+	code17:
+		.byte 2
+
+
 	dataspace:
 		.byte 1
 ; Different data array
@@ -485,13 +498,10 @@ boot:
 	sts link9, r16
 	ldi r16, high(length8)
 	sts link9+1, r16
-	ldi r16, 3
+	ldi r16, 1
 	sts length9, r16
-	ldi r16, 'a'
+	ldi r16, '+'
 	sts name9, r16
-	ldi r16, 'd'
-	sts name9+1, r16
-	sts name9+2, r16 ; r16 is still 'd'
 	ldi r16, low(add_stack)
 	sts code9, r16
 	ldi r16, high(add_stack)
@@ -613,12 +623,36 @@ boot:
 	ldi r16, high(sub_stack)
 	sts code16+1, r16
 
+	; latest
+	ldi r16, low(length16)
+	sts link17, r16
+	ldi r16, high(length16)
+	sts link17+1, r16
+	ldi r16, 6
+	sts length17, r16
+	ldi r16, 'l'
+	sts name17, r16
+	ldi r16, 'a'
+	sts name17+1, r16
+	ldi r16, 't'
+	sts name17+2, r16
+	ldi r16, 'e'
+	sts name17+3, r16
+	ldi r16, 's'
+	sts name17+4, r16
+	ldi r16, 't'
+	sts name17+5, r16
+	ldi r16, low(point_latest)
+	sts code17, r16
+	ldi r16, high(point_latest)
+	sts code17+1, r16
+
 	; VARIABLES -----
 
 	; Initialize latestlink
-	ldi r16, low(length16)
+	ldi r16, low(length17)
 	sts latestlink, r16
-	ldi r16, high(length16)
+	ldi r16, high(length17)
 	sts latestlink+1, r16
 
 	; here -- points at the start of open space
@@ -640,6 +674,8 @@ boot:
 	ldi r24, 'k'
 	rcall putchar
 	ldi r24, 10
+	rcall putchar
+	ldi r24, 13
 	rcall putchar
 
 	; Set code field of interpreter as X, since that is where the program will actually start
@@ -680,6 +716,10 @@ line:
 	rjmp next
 
 continueline:
+;	ldi r24, 13
+;	rcall putchar
+;	ldi r24, 10
+;	rcall putchar
 ;	reset inpointer
 	ldi r16, low(textBuffer)
 	sts inpointer, r16
@@ -755,13 +795,18 @@ emit:
 	mov r24, r26
 	rcall putchar
 
-	rjmp next
-
-hello:
 	ldi r24, 10
 	rcall putchar
 	ldi r24, 13
 	rcall putchar
+
+	rjmp next
+
+hello:
+;	ldi r24, 10
+;	rcall putchar
+;	ldi r24, 13
+;	rcall putchar
 	ldi r24, 'H'
 	rcall putchar
 	ldi r24, 'e'
@@ -789,6 +834,23 @@ point_state:
 point_here:
 	ldi r16, low(here)
 	ldi r18, high(here)
+;	Should I do it this way?
+;	This would make execution a little faster
+;	But I wouln't be able to change here this way
+;	ldi r26, low(here)
+;	ldi r27, high(here)
+;	ld r16, X+
+;	ld r18, X
+	dpush r16, r18
+
+	rjmp next
+
+point_latest:
+;	ldi r24, 'P'
+;	rcall putchar
+	ldi r26, low(latestlink)
+	ldi r27, high(latestlink)
+
 	dpush r16, r18
 
 	rjmp next
@@ -868,8 +930,10 @@ sub_stack:
 
 	dpop r30, r31
 
-	sub r26, r30
-	sbc r27, r31
+	sub r30, r26
+	sbc r31, r27
+
+	dpush r30, r31
 
 	rjmp next
 
@@ -882,10 +946,10 @@ one:
 
 exec:
 ; pops the top of the stack and uses it as the execution address
-	dpop r30, r31 ; data pop
+	dpop r26, r27 ; data pop into X
 
-	ld r20, Z+
-	ld r21, Z
+	ld r20, X+
+	ld r21, X+
 ; If I pop to X instead of Z then I could eliminate this command -- can I do that?
 	movw r30, r20
 
@@ -983,7 +1047,7 @@ wait_UDRE:
 	ret
 
 ; Since r17 is used here, I cannot use it elsewhere
-; I need to add in support for backpacing
+; I need to add in support for backspacing
 input: ; Takes input over UART
 	lds r17, UDR0
 	push r30 ; low(Z)

@@ -99,8 +99,7 @@ write execution pointer to here address
 
 TODO
 
-fix here word
-what was going on with subtract?
-change add to +
+fix here word?
 create and word or nand word
 make emit work with larger numbers
+transition to interpreter/compiler
