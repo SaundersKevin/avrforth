@@ -319,7 +319,6 @@ boot:
 	ldi r16, 13
 	sts textBuffer, r16
 
-
 	; loading primitives
 	; find
 	ldi r16, 1      ; Load length
@@ -572,11 +571,11 @@ boot:
 	ldi r16, 'h'
 	sts name14, r16
 	ldi r16, 'e'
-	sts name14, r16
+	sts name14+1, r16
 	ldi r16, 'r'
-	sts name14, r16
+	sts name14+2, r16
 	ldi r16, 'e'
-	sts name14, r16
+	sts name14+3, r16
 	ldi r16, low(point_here)
 	sts code14, r16
 	ldi r16, high(point_here)
@@ -631,8 +630,8 @@ boot:
 	; enable global interrupts for keying in input
 	; This is done after all the loading up of things so nothings is
 	; broken accidentally
-	ldi r24, 'I'
-	rcall putchar
+;	ldi r24, 'I'
+;	rcall putchar
 	sei
 	
 	; Announcing that the device is ready for input
@@ -871,6 +870,8 @@ sub_stack:
 
 	sub r26, r30
 	sbc r27, r31
+
+	rjmp next
 
 one:
 	ldi r16, 1

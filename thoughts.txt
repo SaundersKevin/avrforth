@@ -94,3 +94,13 @@ if state = 0 continue, else branch to then
 exec
 then get here address
 write execution pointer to here address
+
+--------------------
+
+TODO
+
+fix here word
+what was going on with subtract?
+change add to +
+create and word or nand word
+make emit work with larger numbers
