@@ -77,7 +77,7 @@
 .dseg ; This can produce my starting words and code fields
 .org SRAM_START
 	state:
-		.byte 1
+		.byte 2
 	inpointer:
 		.byte 2
 	textBuffer:
@@ -110,7 +110,7 @@
 		.byte 1
 	name2:
 		.byte 4
-	flags2:
+	flag2:
 		.byte 1
 	code2:
 		.byte 2
@@ -121,7 +121,7 @@
 		.byte 1
 	name3:
 		.byte 1
-	flags3:
+	flag3:
 		.byte 1
 	code3:
 		.byte 2
@@ -132,7 +132,7 @@
 		.byte 1
 	name4:
 		.byte 5
-	flags4:
+	flag4:
 		.byte 1
 	code4:
 		.byte 2
@@ -143,7 +143,7 @@
 		.byte 1
 	name5:
 		.byte 4
-	flags5:
+	flag5:
 		.byte 1
 	code5:
 		.byte 2
@@ -157,7 +157,8 @@
 	flag6:
 		.byte 1
 	code6:
-		.byte 10 ; 2 for each word -- start, line, find, exec, end
+		.byte 36 ; 2 for each word -- line find state @ ifc exec end then here @ ! end
+				 ; 26
 		; other than the first two of code6, this is technically into the parameter field
 ; I need one more word -- the endtoploop word
 	link7:
@@ -280,7 +281,50 @@
 		.byte 1
 	code17:
 		.byte 2
-
+; 18th -- or
+	link18:
+		.byte 2
+	length18:
+		.byte 1
+	name18:
+		.byte 2
+	flag18:
+		.byte 1
+	code18:
+		.byte 2
+; 19th -- !c
+	link19:
+		.byte 2
+	length19:
+		.byte 1
+	name19:
+		.byte 2
+	flag19:
+		.byte 1
+	code19:
+		.byte 2
+; 20th -- @c
+	link20:
+		.byte 2
+	length20:
+		.byte 1
+	name20:
+		.byte 2
+	flag20:
+		.byte 1
+	code20:
+		.byte 2
+; 21st -- exit_compiled (exc)
+	link21:
+		.byte 2
+	length20:
+		.byte 1
+	name21:
+		.byte 3
+	flag21:
+		.byte 1
+	code21:
+		.byte 2
 
 	dataspace:
 		.byte 1
@@ -343,6 +387,8 @@ boot:
 	sts link, r16
 	ldi r16, 0
 	sts link+1, r16
+	ldi r20, 0
+	sts flags, r20
 	ldi r16, low(find) ; Load Code Field
 	sts code, r16
 	ldi r16, high(find)
@@ -363,6 +409,7 @@ boot:
 	sts name2+2, r16
 	ldi r16, 'c'
 	sts name2+3, r16
+	sts flag2, r20
 	ldi r16, low(exec)   ; Load code field
 	sts code2, r16
 	ldi r16, high(exec)
@@ -377,6 +424,7 @@ boot:
 	sts length3, r16
 	ldi r16, '.'          ; Loading name
 	sts name3, r16
+	sts flag3, r20
 	ldi r16, low(emit)    ; Loading code field
 	sts code3, r16
 	ldi r16, high(emit)
@@ -398,6 +446,7 @@ boot:
 	sts name4+3, r16 ; r16 is still l
 	ldi r16, 'o'
 	sts name4+4, r16
+	sts flag4, r20
 	ldi r16, low(hello)   ; Loading code field
 	sts code4, r16
 	ldi r16, high(hello)
@@ -418,13 +467,14 @@ boot:
 	sts name5+2, r16
 	ldi r16, 'e'
 	sts name5+3, r16
+	sts flag5, r20
 	ldi r16, low(line)
 	sts code5, r16
 	ldi r16, high(line)
 	sts code5+1, r16
 
 	; interpreter loop!
-	; line find dup 1 sub @ state @ and if exec endtoploop then here ! endtoploop
+	; line find dup 1 sub @c state @c or if exec endtoploop then here @ ! endtoploop
 	; or I could do nand instead of and and swap the compiler and interpreter spots
 	ldi r16, low(length5)
 	sts link6, r16
@@ -434,6 +484,7 @@ boot:
 	sts length6, r16
 	ldi r16, '$'
 	sts name6, r16
+	sts flag6, r20
 	;longer code field
 	ldi r16, low(entertoploop)
 	sts code6, r16
@@ -447,18 +498,73 @@ boot:
 	sts code6+4, r16
 	ldi r16, high(code)
 	sts code6+5, r16
-;	ldi r16, low(code)  ; state
-;	sts code6+6, r16
-;	ldi r16, high(code)
-;	sts code6+7, r16
-	ldi r16, low(code2) ; exec's code field
+	; dup -- get the execution pointer again
+	ldi r16, low(code8)
 	sts code6+6, r16
-	ldi r16, high(code2)
+	ldi r16, high(code8)
 	sts code6+7, r16
-	ldi r16, low(code7) ; end's code field
+	; 1 -- put one
+	ldi r16, low(code10)
 	sts code6+8, r16
-	ldi r16, high(code7)
+	ldi r16, high(code10)
 	sts code6+9, r16
+	; sub -- move exec pointer to flags field
+	ldi r16, low(code16)
+	sts code6+10, r16
+	ldi r16, high(code16)
+	sts code6+11, r16
+	; @c -- fetch flag
+	ldi r16, low(code20)
+	sts code6+12, r16
+	ldi r16, high(code20)
+	sts code6+13, r16
+	ldi r16, low(code11)  ; state
+	sts code6+14, r16
+	ldi r16, high(code11)
+	sts code6+15, r16
+	ldi r16, low(code20)	; @c
+	sts code6+16, r16
+	ldi r16, high(code20)
+	sts code6+17, r16
+	; or
+	ldi r16, low(code18)
+	sts code6+18, r16
+	ldi r16, high(code18)
+	sts code6+19, r16
+	ldi r16, low(code15)	; ifc
+	sts code6+20, r16
+	ldi r16, high(code15)
+	sts code6+21, r16
+; HERE IS THEN ADDRESS
+	ldi r16, low(code6+28)
+	sts code6+22, r16
+	ldi r16, high(code6+28)
+	sts code6+23, r16
+	ldi r16, low(code2) ; exec's code field
+	sts code6+24, r16
+	ldi r16, high(code2)
+	sts code6+25, r16
+	ldi r16, low(code7) ; end's code field
+	sts code6+26, r16
+	ldi r16, high(code7)
+	sts code6+27, r16
+;	then
+	ldi r16, low(code14) ; here
+	sts code6+28, r16
+	ldi r16, high(code14)
+	sts code6+29, r16
+	ldi r16, low(code12) ; @
+	sts code6+30, r16
+	ldi r16, high(code12)
+	sts code6+31, r16
+	ldi r16, low(code13) ; store
+	sts code6+32, r16
+	ldi r16, high(code13)
+	sts code6+33, r16
+	ldi r16, low(code7) ; end
+	sts code6+34, r16
+	ldi r16, high(code7)
+	sts code6+35, r16
 
 	; end top loop
 	ldi r16, low(length6)
@@ -469,6 +575,7 @@ boot:
 	sts length7, r16
 	ldi r16, ')'
 	sts name7, r16
+	sts flag7, r20
 	; back to short code fields
 	ldi r16, low(endtoploop)
 	sts code7, r16
@@ -488,6 +595,7 @@ boot:
 	sts name8+1, r16
 	ldi r16, 'p'
 	sts name8+2, r16
+	sts flag8, r20
 	ldi r16, low(dup)
 	sts code8, r16
 	ldi r16, high(dup)
@@ -502,6 +610,7 @@ boot:
 	sts length9, r16
 	ldi r16, '+'
 	sts name9, r16
+	sts flag9, r20
 	ldi r16, low(add_stack)
 	sts code9, r16
 	ldi r16, high(add_stack)
@@ -516,6 +625,7 @@ boot:
 	sts length10, r16
 	ldi r16, '1'
 	sts name10, r16
+	sts flag10, r20
 	ldi r16, low(one)
 	sts code10, r16
 	ldi r16, high(one)
@@ -538,6 +648,7 @@ boot:
 	sts name11+3, r16
 	ldi r16, 'e'
 	sts name11+4, r16
+	sts flag11, r20
 	ldi r16, low(point_state)
 	sts code11, r16
 	ldi r16, high(point_state)
@@ -552,6 +663,7 @@ boot:
 	sts length12, r16
 	ldi r16, '@'
 	sts name12, r16
+	sts flag12, r20
 	ldi r16, low(fetch)
 	sts code12, r16
 	ldi r16, high(fetch)
@@ -566,6 +678,7 @@ boot:
 	sts length13, r16
 	ldi r16, '!'
 	sts name13, r16
+	sts flag13, r20
 	ldi r16, low(store)
 	sts code13, r16
 	ldi r16, high(store)
@@ -586,6 +699,7 @@ boot:
 	sts name14+2, r16
 	ldi r16, 'e'
 	sts name14+3, r16
+	sts flag14, r20
 	ldi r16, low(point_here)
 	sts code14, r16
 	ldi r16, high(point_here)
@@ -604,6 +718,7 @@ boot:
 	sts name15+1, r16
 	ldi r16, 'c'
 	sts name15+2, r16
+	sts flag15, r20
 	ldi r16, low(if_program)
 	sts code15, r16
 	ldi r16, high(if_program)
@@ -618,6 +733,7 @@ boot:
 	sts length16, r16
 	ldi r16, '-'
 	sts name16, r16
+	sts flag16, r20
 	ldi r16, low(sub_stack)
 	sts code16, r16
 	ldi r16, high(sub_stack)
@@ -642,17 +758,69 @@ boot:
 	sts name17+4, r16
 	ldi r16, 't'
 	sts name17+5, r16
+	sts flag17, r20
 	ldi r16, low(point_latest)
 	sts code17, r16
 	ldi r16, high(point_latest)
 	sts code17+1, r16
 
+	; or
+	ldi r16, low(length17)
+	sts link18, r16
+	ldi r16, high(length17)
+	sts link18+1, r16
+	ldi r16, 2
+	sts length18, r16
+	ldi r16, 'o'
+	sts name18, r16
+	ldi r16, 'r'
+	sts name18+1, r16
+	sts flag18, r20
+	ldi r16, low(or_stack)
+	sts code18, r16
+	ldi r16, high(or_stack)
+	sts code18+1, r16
+
+	; !c
+	ldi r16, low(length18)
+	sts link19, r16
+	ldi r26, high(length18)
+	sts link19+1, r16
+	ldi r16, 2
+	sts length19, r16
+	ldi r16, '!'
+	sts name19, r16
+	ldi r16, 'c'
+	sts name19+1, r16
+	sts flag19, r20
+	ldi r16, low(storec)
+	sts code19, r16
+	ldi r16, high(storec)
+	sts code19+1, r16
+
+	; @c
+	ldi r16, low(length19)
+	sts link20, r16
+	ldi r16, high(length19)
+	sts link20+1, r16
+	ldi r16, 2
+	sts length20, r16
+	ldi r16, '@'
+	sts name20, r16
+	ldi r16, 'c'
+	sts name20+1, r16
+	sts flag20, r20
+	ldi r16, low(fetchc)
+	sts code20, r16
+	ldi r16, high(fetchc)
+	sts code20+1, r16
+
 	; VARIABLES -----
 
 	; Initialize latestlink
-	ldi r16, low(length17)
+	ldi r16, low(length20)
 	sts latestlink, r16
-	ldi r16, high(length17)
+	ldi r16, high(length20)
 	sts latestlink+1, r16
 
 	; here -- points at the start of open space
@@ -660,6 +828,10 @@ boot:
 	sts here, r16
 	ldi r16, high(dataspace)
 	sts here+1, r16
+
+	ldi r16, 1
+	sts state, r16
+	sts state+1, r16
 
 	; enable global interrupts for keying in input
 	; This is done after all the loading up of things so nothings is
@@ -848,8 +1020,8 @@ point_here:
 point_latest:
 ;	ldi r24, 'P'
 ;	rcall putchar
-	ldi r26, low(latestlink)
-	ldi r27, high(latestlink)
+	ldi r16, low(latestlink)
+	ldi r18, high(latestlink)
 
 	dpush r16, r18
 
@@ -878,18 +1050,33 @@ store:
 
 	rjmp next
 
+fetchc:
+	dpop r26, r27
+
+	ld r16, X
+	ldi r18, 0
+
+	dpush r16, r18
+
+	rjmp next
+
+storec:
+	dpop r26, r27
+
+	dpop r30, r31
+
+	st X, r30
+
+	rjmp next
+
 if_program:
-	;pop the top of the stach
+	;pop the top of the stack
 	;cannot be to X, since that is needed if branch
 	dpop r30, r31
 	
-	;tst popped value
+	;using or will prevent problems with only part being zeroed
+	or r30, r31
 	tst r30
-	;branch if eq
-	breq if_branch
-	; testing the second part of the register
-	; mostly this will be zero, so we test low first
-	tst r31
 	breq if_branch
 
 	; skip the address for branching, then continue with next
@@ -900,8 +1087,10 @@ if_branch:
 	;fetch next values from code field into Y (IP) -- this will skip execution to
 	;where specified
 	;X is already pointing at the correct spot
-	ld r28, X+
-	ld r29, X
+	ld r30, Y+
+	ld r31, Y
+
+	movw r28, r30
 
 	; resume execution
 	rjmp next
@@ -941,6 +1130,18 @@ one:
 	ldi r16, 1
 	ldi r18, 0
 	dpush r16, r18 ; high is null
+
+	rjmp next
+
+or_stack:
+	dpop r26, r27
+
+	dpop r30, r31
+
+	or r26, r30
+	or r27, r31
+
+	dpush r26, r27
 
 	rjmp next
 
@@ -1057,6 +1258,11 @@ input: ; Takes input over UART
 	lds r30, inpointer     ; low(Z)
 	lds r31, (inpointer+1) ; high(Z)
 
+	cpi r17, 127 ; 8 is backspace character
+	breq backspace
+	cpi r17, 8
+	breq backspace
+
 	; Write r17 to where we are pointing
 	st Z, r17
 
@@ -1069,6 +1275,23 @@ input: ; Takes input over UART
 	sts inpointer, r30
 	sts (inpointer+1), r31
 	
+	pop r31
+	pop r30
+	reti
+
+backspace:
+	; print backspace
+	ldi r24, 8
+	rcall putchar
+	ldi r24, ' '
+	rcall putchar
+	ldi r24, 8
+	rcall putchar
+	; move buffer pointer back
+	sbiw r30, 1
+	sts inpointer, r30
+	sts inpointer+1, r31
+
 	pop r31
 	pop r30
 	reti
