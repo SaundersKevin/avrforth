@@ -325,6 +325,7 @@
 		.byte 1
 	code21:
 		.byte 2
+; 22nd -- enter (:)
 
 	dataspace:
 		.byte 1
@@ -897,6 +898,7 @@ continueline:
 	sts inpointer, r16
 	ldi r16, high(textBuffer)
 	sts inpointer+1, r16
+	
 lineloop:
 ;	ldi r24, 'l'
 ;	rcall putchar
@@ -906,6 +908,7 @@ lineloop:
 	breq resetline
 	
 	rjmp lineloop
+	
 resetline:
 ;	reset parsepointer before returning
 	ldi r16, low(textBuffer-1)
@@ -947,6 +950,22 @@ endtoploop:
 	; this program will be called by next. Popping X will allow it to restart
 	ijmp
 	
+enter_program:
+	in psuedo code
+	get here
+	write latest link and increment here
+	get here and dup
+	increment top here
+	write next token using top here while counting
+	write count to bottom here
+	here now points after name -- get here
+	write zeros for flag
+	increment here
+	write enter pointer
+	increment here
+	change state
+
+	compiler will now handle writing pointers, so rjmp next
 
 enter:
 	rpush r28, r29 ; push Y
