@@ -953,10 +953,30 @@ endtoploop:
 enter_program:
 	in psuedo code
 	get here
+	ld r26, here
+	ld r27, here+1
+	
 	write latest link and increment here
+	ld r30, latestlink
+	ld r31, latestlink+1
+	st X+, r30
+	st X+, r31 ; here is incremented through this
+
 	get here and dup
-	increment top here
+	dpush r26, r27 ; push onto the stack for retreiving name address later
+	adiw r26, 1
+
+	get parsepointer in Z
+	ld r30, parsepointer ; parsepointer will be pointing at 
+	ld r31, parsepointer
+	
 	write next token using top here while counting
+writetoken:
+	; r16 will be used for count
+	; loading one character off buffer and storing in data
+	ld r18, Z+ ; -> parsepointer
+	st X+ r18  ; -> here
+	inc r16    ; count
 	write count to bottom here
 	here now points after name -- get here
 	write zeros for flag
