@@ -326,9 +326,19 @@
 	code21:
 		.byte 2
 ; 22nd -- enter (:)
+	link22:
+		.byte 2
+	length22:
+		.byte 1
+	name22:
+		.byte 1
+	flag22:
+		.byte 1
+	code22:
+		.byte 2
 
 	dataspace:
-		.byte 1
+		.byte 1 ; not sure if the .byte is needed, but I am putting it anyway
 ; Different data array
 .cseg
 ; Need to set registers to point at the correct values in data memory
@@ -785,7 +795,7 @@ boot:
 	; !c
 	ldi r16, low(length18)
 	sts link19, r16
-	ldi r26, high(length18)
+	ldi r16, high(length18)
 	sts link19+1, r16
 	ldi r16, 2
 	sts length19, r16
@@ -815,6 +825,13 @@ boot:
 	sts code20, r16
 	ldi r16, high(fetchc)
 	sts code20+1, r16
+
+	; exc (exit compiled)
+	ldi r16, low(length20)
+	sts link21, r16
+	ldi r16, high(length20)
+	sts link21+1, r16
+	
 
 	; VARIABLES -----
 
@@ -951,41 +968,75 @@ endtoploop:
 	ijmp
 	
 enter_program:
-	in psuedo code
-	get here
-	ld r26, here
-	ld r27, here+1
+	;get here
+	lds r26, here
+	lds r27, here+1
 	
-	write latest link and increment here
-	ld r30, latestlink
-	ld r31, latestlink+1
+	;write latest link and increment here
+	lds r30, latestlink
+	lds r31, latestlink+1
 	st X+, r30
 	st X+, r31 ; here is incremented through this
 
-	get here and dup
+	;get here and dup
 	dpush r26, r27 ; push onto the stack for retreiving name address later
 	adiw r26, 1
 
-	get parsepointer in Z
+	;get parsepointer in Z
 	ld r30, parsepointer ; parsepointer will be pointing at 
 	ld r31, parsepointer
 	
-	write next token using top here while counting
+	;write next token using top here while counting
+; this routine feels more well written than my find one
+; I might go fix up my find routine after this
 writetoken:
 	; r16 will be used for count
 	; loading one character off buffer and storing in data
 	ld r18, Z+ ; -> parsepointer
+
+	; check if the token is done yet
+	cpi r18, ' '
+	breq writerest
+	spi r18, 13
+	breq writerest
+
 	st X+ r18  ; -> here
 	inc r16    ; count
-	write count to bottom here
-	here now points after name -- get here
-	write zeros for flag
-	increment here
-	write enter pointer
-	increment here
-	change state
+	rjmp writetoken
 
-	compiler will now handle writing pointers, so rjmp next
+writerest:
+	sbiw r30, 1 ; decrement parsepointer so find will work correctly
+	sts parsepointer, r30 ; store new parsepointer
+	sts parsepointer, r31
+	
+	;here now points after name
+	;write zeros for flag
+	;increment here
+	; is there a dedicated NULL register?
+	ldi r20, 0 ; I will have to check if this one will stay as 0
+	st X+, r20
+
+	;write enter pointer
+	;increment here
+	ldi r18, low(enter)
+	st X+, r20
+	ldi r18, high(enter)
+	st X+ r20
+	
+	;store new here pointer
+	sts here, r26
+	sts here+1, r27
+	
+	;write count to bottom here
+	dpop r26, r27
+	st X, r16
+	
+	;change state to compile (0)
+	; r20 is still 0 from earlier
+	sts state, r20
+
+	;compiler will now handle writing pointers, so rjmp next
+	rjmp next
 
 enter:
 	rpush r28, r29 ; push Y
