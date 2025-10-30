@@ -317,7 +317,7 @@
 ; 21st -- exit_compiled (exc)
 	link21:
 		.byte 2
-	length20:
+	length21:
 		.byte 1
 	name21:
 		.byte 3
@@ -485,7 +485,7 @@ boot:
 	sts code5+1, r16
 
 	; interpreter loop!
-	; line find dup 1 sub @c state @c or if exec endtoploop then here @ ! endtoploop
+	; line find dup 1 sub @c state @c or if exec endtoploop then here @ !( 1 here + here ! )endtoploop
 	; or I could do nand instead of and and swap the compiler and interpreter spots
 	ldi r16, low(length5)
 	sts link6, r16
@@ -831,14 +831,41 @@ boot:
 	sts link21, r16
 	ldi r16, high(length20)
 	sts link21+1, r16
-	
+	ldi r16, 3
+	sts length21, r16
+	ldi r16, 'e'
+	sts name21, r16
+	ldi r16, 'x'
+	sts name21, r16
+	ldi r16, 'c'
+	sts name21, r16
+	sts flag21, r20
+	ldi r16, low(exit)
+	sts code21, r16
+	ldi r16, high(exit)
+	sts code21+1, r16
+
+	; enter_program
+	ldi r16, low(length21)
+	sts link22, r16
+	ldi r16, high(length21)
+	sts link22+1, r16
+	ldi r16, 1
+	sts length22, r16
+	ldi r16, ':'
+	sts name22, r16
+	sts flag22, r20
+	ldi r16, low(enter_program)
+	sts code22, r16
+	ldi r16, high(enter_program)
+	sts code22+1, r16
 
 	; VARIABLES -----
 
 	; Initialize latestlink
-	ldi r16, low(length20)
+	ldi r16, low(length22)
 	sts latestlink, r16
-	ldi r16, high(length20)
+	ldi r16, high(length22)
 	sts latestlink+1, r16
 
 	; here -- points at the start of open space
@@ -874,8 +901,8 @@ boot:
 	rjmp entertoploop
 
 next:
-;	ldi r24, 'N'
-;	rcall putchar
+	ldi r24, 'N'
+	rcall putchar
 	ld r26, Y+ ; Load (Y) to X: low then high
 	ld r27, Y+
 
@@ -983,12 +1010,13 @@ enter_program:
 	adiw r26, 1
 
 	;get parsepointer in Z
-	ld r30, parsepointer ; parsepointer will be pointing at 
-	ld r31, parsepointer
+	lds r30, parsepointer ; parsepointer will be pointing at 
+	lds r31, parsepointer+1
 	
 	;write next token using top here while counting
 ; this routine feels more well written than my find one
 ; I might go fix up my find routine after this
+	clr r16
 writetoken:
 	; r16 will be used for count
 	; loading one character off buffer and storing in data
@@ -997,31 +1025,31 @@ writetoken:
 	; check if the token is done yet
 	cpi r18, ' '
 	breq writerest
-	spi r18, 13
+	cpi r18, 13
 	breq writerest
 
-	st X+ r18  ; -> here
+	st X+, r18  ; -> here
 	inc r16    ; count
 	rjmp writetoken
 
 writerest:
 	sbiw r30, 1 ; decrement parsepointer so find will work correctly
 	sts parsepointer, r30 ; store new parsepointer
-	sts parsepointer, r31
+	sts parsepointer+1, r31
 	
 	;here now points after name
 	;write zeros for flag
 	;increment here
 	; is there a dedicated NULL register?
-	ldi r20, 0 ; I will have to check if this one will stay as 0
+	clr r20 ; I will have to check if this one will stay as 0
 	st X+, r20
 
 	;write enter pointer
 	;increment here
 	ldi r18, low(enter)
-	st X+, r20
+	st X+, r18
 	ldi r18, high(enter)
-	st X+ r20
+	st X+, r18
 	
 	;store new here pointer
 	sts here, r26
