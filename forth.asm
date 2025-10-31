@@ -157,7 +157,7 @@
 	flag6:
 		.byte 1
 	code6:
-		.byte 36 ; 2 for each word -- line find state @ ifc exec end then here @ ! end
+		.byte 48 ; 2 for each word -- line find state @ ifc exec end then here @ ! 1 here + here ! end
 				 ; 26
 		; other than the first two of code6, this is technically into the parameter field
 ; I need one more word -- the endtoploop word
@@ -396,7 +396,6 @@ boot:
 	; link zeroed -- I will use this for error checking in the future
 	ldi r16, 0
 	sts link, r16
-	ldi r16, 0
 	sts link+1, r16
 	ldi r20, 0
 	sts flags, r20
@@ -485,7 +484,7 @@ boot:
 	sts code5+1, r16
 
 	; interpreter loop!
-	; line find dup 1 sub @c state @c or if exec endtoploop then here @ !( 1 here + here ! )endtoploop
+	; line find dup 1 sub @c state @c or if exec endtoploop then here @ ! 1 here + here ! endtoploop
 	; or I could do nand instead of and and swap the compiler and interpreter spots
 	ldi r16, low(length5)
 	sts link6, r16
@@ -572,10 +571,41 @@ boot:
 	sts code6+32, r16
 	ldi r16, high(code13)
 	sts code6+33, r16
-	ldi r16, low(code7) ; end
+;	1
+	ldi r16, low(code10)
 	sts code6+34, r16
-	ldi r16, high(code7)
+	ldi r16, high(code10)
 	sts code6+35, r16
+;	here
+	ldi r16, low(code14)
+	sts code6+36, r16
+	ldi r16, high(code14)
+	sts code6+37, r16
+;	@
+	ldi r16, low(code12)
+	sts code6+38, r16
+	ldi r16, high(code12)
+	sts code6+39, r16
+;	+
+	ldi r16, low(code9)
+	sts code6+40, r16
+	ldi r16, high(code9)
+	sts code6+41, r16
+;	here
+	ldi r16, low(code14)
+	sts code6+42, r16
+	ldi r16, high(code14)
+	sts code6+43, r16
+;	store (!)
+	ldi r16, low(code13)
+	sts code6+44, r16
+	ldi r16, high(code13)
+	sts code6+45, r16
+;	end
+	ldi r16, low(code7)
+	sts code6+46, r16
+	ldi r16, high(code7)
+	sts code6+47, r16
 
 	; end top loop
 	ldi r16, low(length6)
@@ -836,9 +866,9 @@ boot:
 	ldi r16, 'e'
 	sts name21, r16
 	ldi r16, 'x'
-	sts name21, r16
+	sts name21+1, r16
 	ldi r16, 'c'
-	sts name21, r16
+	sts name21+2, r16
 	sts flag21, r20
 	ldi r16, low(exit)
 	sts code21, r16
@@ -998,7 +1028,9 @@ enter_program:
 	;get here
 	lds r26, here
 	lds r27, here+1
-	
+
+	ldi r24, 'L'
+	rcall putchar
 	;write latest link and increment here
 	lds r30, latestlink
 	lds r31, latestlink+1
@@ -1012,6 +1044,8 @@ enter_program:
 	;get parsepointer in Z
 	lds r30, parsepointer ; parsepointer will be pointing at 
 	lds r31, parsepointer+1
+
+	adiw r30, 1
 	
 	;write next token using top here while counting
 ; this routine feels more well written than my find one
@@ -1028,11 +1062,16 @@ writetoken:
 	cpi r18, 13
 	breq writerest
 
+	ldi r24, 'W'
+	rcall putchar
+
 	st X+, r18  ; -> here
 	inc r16    ; count
 	rjmp writetoken
 
 writerest:
+	ldi r24, 'S'
+	rcall putchar
 	sbiw r30, 1 ; decrement parsepointer so find will work correctly
 	sts parsepointer, r30 ; store new parsepointer
 	sts parsepointer+1, r31
@@ -1044,6 +1083,8 @@ writerest:
 	clr r20 ; I will have to check if this one will stay as 0
 	st X+, r20
 
+	ldi r24, 'P'
+	rcall putchar
 	;write enter pointer
 	;increment here
 	ldi r18, low(enter)
@@ -1054,7 +1095,13 @@ writerest:
 	;store new here pointer
 	sts here, r26
 	sts here+1, r27
-	
+
+	ldi r24, 'C'
+	rcall putchar
+	mov r24, r16
+	ldi r18, 48
+	add r24, r18
+	rcall putchar
 	;write count to bottom here
 	dpop r26, r27
 	st X, r16
