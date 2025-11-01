@@ -100,11 +100,9 @@ write execution pointer to here address
 TODO
 
 create and word or nand word
-make emit work with larger numbers
-move here in compiler
+make . work
 handling errors in find -- check for null pointer before restarting loop
 if there is a null pointer, print some error message and restart?
 if find points at a space, call line or something
-create exit word
 optimize find routine -- look at enter_program-writetoken
-make enter save new latestlink before exiting
+alternative output method -- interrupts and communicating over composite
