@@ -105,5 +105,6 @@ move here in compiler
 handling errors in find -- check for null pointer before restarting loop
 if there is a null pointer, print some error message and restart?
 if find points at a space, call line or something
-create enter and exit words
+create exit word
 optimize find routine -- look at enter_program-writetoken
+make enter save new latestlink before exiting

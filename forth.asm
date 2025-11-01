@@ -114,13 +114,13 @@
 		.byte 1
 	code2:
 		.byte 2
-; Third Word -- emit
+; Third Word -- emit -- not .
 	link3:
 		.byte 2
 	length3:
 		.byte 1
 	name3:
-		.byte 1
+		.byte 4
 	flag3:
 		.byte 1
 	code3:
@@ -157,7 +157,7 @@
 	flag6:
 		.byte 1
 	code6:
-		.byte 48 ; 2 for each word -- line find state @ ifc exec end then here @ ! 1 here + here ! end
+		.byte 52 ; 2 for each word -- line find state @ ifc exec end then here @ ! 1 here + here ! end
 				 ; 26
 		; other than the first two of code6, this is technically into the parameter field
 ; I need one more word -- the endtoploop word
@@ -336,6 +336,17 @@
 		.byte 1
 	code22:
 		.byte 2
+; 23rd -- exit (;)
+	link23:
+		.byte 2
+	length23:
+		.byte 1
+	name23:
+		.byte 1
+	flag23:
+		.byte 1
+	code23:
+		.byte 2
 
 	dataspace:
 		.byte 1 ; not sure if the .byte is needed, but I am putting it anyway
@@ -430,10 +441,16 @@ boot:
 	sts link3, r16
 	ldi r16, high(length2)
 	sts link3+1, r16
-	ldi r16, 1            ; Loading length
+	ldi r16, 4            ; Loading length
 	sts length3, r16
-	ldi r16, '.'          ; Loading name
+	ldi r16, 'e'          ; Loading name
 	sts name3, r16
+	ldi r16, 'm'
+	sts name3+1, r16
+	ldi r16, 'i'
+	sts name3+2, r16
+	ldi r16, 't'
+	sts name3+3, r16
 	sts flag3, r20
 	ldi r16, low(emit)    ; Loading code field
 	sts code3, r16
@@ -576,36 +593,46 @@ boot:
 	sts code6+34, r16
 	ldi r16, high(code10)
 	sts code6+35, r16
-;	here
-	ldi r16, low(code14)
+;	1
+	ldi r16, low(code10)
 	sts code6+36, r16
-	ldi r16, high(code14)
+	ldi r16, high(code10)
 	sts code6+37, r16
-;	@
-	ldi r16, low(code12)
-	sts code6+38, r16
-	ldi r16, high(code12)
-	sts code6+39, r16
 ;	+
 	ldi r16, low(code9)
-	sts code6+40, r16
+	sts code6+38, r16
 	ldi r16, high(code9)
-	sts code6+41, r16
+	sts code6+39, r16
 ;	here
 	ldi r16, low(code14)
-	sts code6+42, r16
+	sts code6+40, r16
 	ldi r16, high(code14)
+	sts code6+41, r16
+;	@
+	ldi r16, low(code12)
+	sts code6+42, r16
+	ldi r16, high(code12)
 	sts code6+43, r16
+;	+
+	ldi r16, low(code9)
+	sts code6+44, r16
+	ldi r16, high(code9)
+	sts code6+45, r16
+;	here
+	ldi r16, low(code14)
+	sts code6+46, r16
+	ldi r16, high(code14)
+	sts code6+47, r16
 ;	store (!)
 	ldi r16, low(code13)
-	sts code6+44, r16
+	sts code6+48, r16
 	ldi r16, high(code13)
-	sts code6+45, r16
+	sts code6+49, r16
 ;	end
 	ldi r16, low(code7)
-	sts code6+46, r16
+	sts code6+50, r16
 	ldi r16, high(code7)
-	sts code6+47, r16
+	sts code6+51, r16
 
 	; end top loop
 	ldi r16, low(length6)
@@ -890,12 +917,27 @@ boot:
 	ldi r16, high(enter_program)
 	sts code22+1, r16
 
+	ldi r16, low(length22)
+	sts link23, r16
+	ldi r16, high(length22)
+	sts link23+1, r16
+	ldi r16, 1
+	sts length23, r16
+	ldi r16, ';'
+	sts name23, r16
+	ldi r16, 1
+	sts flag23, r16
+	ldi r16, low(exit_program)
+	sts code23, r16
+	ldi r16, high(exit_program)
+	sts code23+1, r16
+
 	; VARIABLES -----
 
 	; Initialize latestlink
-	ldi r16, low(length22)
+	ldi r16, low(length23)
 	sts latestlink, r16
-	ldi r16, high(length22)
+	ldi r16, high(length23)
 	sts latestlink+1, r16
 
 	; here -- points at the start of open space
@@ -931,8 +973,8 @@ boot:
 	rjmp entertoploop
 
 next:
-	ldi r24, 'N'
-	rcall putchar
+;	ldi r24, 'N'
+;	rcall putchar
 	ld r26, Y+ ; Load (Y) to X: low then high
 	ld r27, Y+
 
@@ -1023,14 +1065,36 @@ endtoploop:
 	; will set IP as the threaded code, and will jump to next
 	; this program will be called by next. Popping X will allow it to restart
 	ijmp
+
+exit_program:
+;	get here
+	lds r26, here
+	lds r27, here+1
+	
+;	write exc pointer to here and inc
+	ldi r16, low(code21)
+	st X+, r16
+	ldi r16, high(code21)
+	st X+, r16
+
+;	save new here
+	sts here, r26
+	sts here+1, r27
+
+;	change to interpret state
+	ldi r16, 1
+	sts state, r16
+
+;	return
+	rjmp next
 	
 enter_program:
 	;get here
 	lds r26, here
 	lds r27, here+1
 
-	ldi r24, 'L'
-	rcall putchar
+;	ldi r24, 'L'
+;	rcall putchar
 	;write latest link and increment here
 	lds r30, latestlink
 	lds r31, latestlink+1
@@ -1039,6 +1103,9 @@ enter_program:
 
 	;get here and dup
 	dpush r26, r27 ; push onto the stack for retreiving name address later
+	sts latestlink, r26 ; stores it as a new word
+	sts latestlink+1, r27
+;	rpush r26, r27
 	adiw r26, 1
 
 	;get parsepointer in Z
@@ -1050,7 +1117,12 @@ enter_program:
 	;write next token using top here while counting
 ; this routine feels more well written than my find one
 ; I might go fix up my find routine after this
-	clr r16
+	clr r21
+;	ldi r21, 1
+;	ldi r20, 48
+;	mov r24, r21
+;	add r24, r20
+;	rcall putchar
 writetoken:
 	; r16 will be used for count
 	; loading one character off buffer and storing in data
@@ -1062,16 +1134,19 @@ writetoken:
 	cpi r18, 13
 	breq writerest
 
-	ldi r24, 'W'
-	rcall putchar
+;	ldi r24, 'W'
+;	rcall putchar
 
 	st X+, r18  ; -> here
-	inc r16    ; count
+	inc r21    ; count
+;	mov r24, r21
+;	add r24, r20
+;	rcall putchar
 	rjmp writetoken
 
 writerest:
-	ldi r24, 'S'
-	rcall putchar
+;	ldi r24, 'S'
+;	rcall putchar
 	sbiw r30, 1 ; decrement parsepointer so find will work correctly
 	sts parsepointer, r30 ; store new parsepointer
 	sts parsepointer+1, r31
@@ -1083,8 +1158,8 @@ writerest:
 	clr r20 ; I will have to check if this one will stay as 0
 	st X+, r20
 
-	ldi r24, 'P'
-	rcall putchar
+;	ldi r24, 'P'
+;	rcall putchar
 	;write enter pointer
 	;increment here
 	ldi r18, low(enter)
@@ -1096,15 +1171,15 @@ writerest:
 	sts here, r26
 	sts here+1, r27
 
-	ldi r24, 'C'
-	rcall putchar
-	mov r24, r16
-	ldi r18, 48
-	add r24, r18
-	rcall putchar
+;	ldi r24, 'C'
+;	rcall putchar
+;	mov r24, r21
+;	ldi r18, 48
+;	add r24, r18
+;	rcall putchar
 	;write count to bottom here
 	dpop r26, r27
-	st X, r16
+	st X, r21
 	
 	;change state to compile (0)
 	; r20 is still 0 from earlier
@@ -1127,15 +1202,15 @@ exit:
 ; ---------------------
 emit:
 	dpop r26,r27 ; move into X
-	adiw r26, 48 ; display a single digit correctly
+;	adiw r26, 48 ; display a single digit correctly
 				 ; I need to make this display greater than 9, too
 	mov r24, r26
 	rcall putchar
 
-	ldi r24, 10
-	rcall putchar
-	ldi r24, 13
-	rcall putchar
+;	ldi r24, 10
+;	rcall putchar
+;	ldi r24, 13
+;	rcall putchar
 
 	rjmp next
 
